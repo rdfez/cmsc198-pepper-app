@@ -1,136 +1,222 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-
-Future<void> main() async {
-  // Ensure that plugin services are initialized so that `availableCameras()`
-  // can be called before `runApp()`
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // Obtain a list of the available cameras on the device.
-  final cameras = await availableCameras();
-
-  // Get a specific camera from the list of available cameras.
-  final firstCamera = cameras.first;
-
-  runApp(
-    MaterialApp(
-      theme: ThemeData.dark(),
-      home: TakePictureScreen(
-        // Pass the appropriate camera to the TakePictureScreen widget.
-        camera: firstCamera,
-      ),
-    ),
-  );
-}
+import 'package:permission_handler/permission_handler.dart';
 
 // A screen that allows users to take a picture using a given camera.
 class TakePictureScreen extends StatefulWidget {
-  const TakePictureScreen({super.key, required this.camera});
-
-  final CameraDescription camera;
+  const TakePictureScreen({super.key});
 
   @override
   TakePictureScreenState createState() => TakePictureScreenState();
 }
 
 class TakePictureScreenState extends State<TakePictureScreen> {
-  late CameraController _controller;
-  late Future<void> _initializeControllerFuture;
+  CameraController? _controller;
+  XFile? _capturedFile;
+  bool _isInitialized = false;
+  bool _isGuideVisible = false;
 
   @override
   void initState() {
     super.initState();
-    // To display the current output from the Camera,
-    // create a CameraController.
-    _controller = CameraController(
-      // Get a specific camera from the list of available cameras.
-      widget.camera,
-      // Define the resolution to use.
-      ResolutionPreset.medium,
-    );
-
-    // Next, initialize the controller. This returns a Future.
-    _initializeControllerFuture = _controller.initialize();
+    _checkPermissionAndInit();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    // _setupCamera();
   }
+
+  Future<void> _checkPermissionAndInit() async {
+    var status = await Permission.camera.request();
+    if (status.isGranted) {
+      // _setupCamera();
+      final cameras = await availableCameras();
+      if (cameras.isEmpty) return;
+      
+      _controller = CameraController(
+        cameras[0],
+        ResolutionPreset.medium,
+        enableAudio: false,
+      );
+      await _controller!.initialize();
+      
+      if (mounted) {
+        setState(() => _isInitialized = true);
+      }
+    } else {
+      print("Camera permission denied");
+    }
+  }
+
+  // // Initialize camera controller 
+  // Future<void> _setupCamera() async {
+  //   final cameras = await availableCameras();
+  //   if (cameras.isEmpty) return;
+    
+  //   _controller = CameraController(
+  //     cameras[0],
+  //     ResolutionPreset.medium,
+  //     enableAudio: false,
+  //   );
+  //   await _controller!.initialize();
+    
+  //   if (mounted) {
+  //     setState(() => _isInitialized = true);
+  //   }
+  // }
 
   @override
   void dispose() {
-    // Dispose of the controller when the widget is disposed.
-    _controller.dispose();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp, // Revert to portrait mode
+    ]);
+    _controller?.dispose();
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Take a picture')),
-      // You must wait until the controller is initialized before displaying the
-      // camera preview. Use a FutureBuilder to display a loading spinner until the
-      // controller has finished initializing.
-      body: FutureBuilder<void>(
-        future: _initializeControllerFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.done) {
-            // If the Future is complete, display the preview.
-            return CameraPreview(_controller);
-          } else {
-            // Otherwise, display a loading indicator.
-            return const Center(child: CircularProgressIndicator());
-          }
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        // Provide an onPressed callback.
-        onPressed: () async {
-          // Take the Picture in a try / catch block. If anything goes wrong,
-          // catch the error.
-          try {
-            // Ensure that the camera is initialized.
-            await _initializeControllerFuture;
-
-            // Attempt to take a picture and get the file `image`
-            // where it was saved.
-            final image = await _controller.takePicture();
-
-            if (!context.mounted) return;
-
-            // If the picture was taken, display it on a new screen.
-            await Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (context) => DisplayPictureScreen(
-                  // Pass the automatically generated path to
-                  // the DisplayPictureScreen widget.
-                  imagePath: image.path,
-                ),
-              ),
-            );
-          } catch (e) {
-            // If an error occurs, log the error to the console.
-            print(e);
-          }
-        },
-        child: const Icon(Icons.camera_alt),
-      ),
-    );
+  // Capture current frame
+  Future<void> _takePicture() async {
+    if (_controller == null || !_controller!.value.isInitialized) return;
+    try {
+      final file = await _controller!.takePicture();
+      setState(() => _capturedFile = file);
+    } catch (e) {
+      debugPrint("Error taking picture: $e");
+    }
   }
-}
 
-// A widget that displays the picture taken by the user.
-class DisplayPictureScreen extends StatelessWidget {
-  final String imagePath;
-
-  const DisplayPictureScreen({super.key, required this.imagePath});
-
-  @override
+@override
   Widget build(BuildContext context) {
+    if (!_isInitialized || _controller == null) {
+      return const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+      );
+    }
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Display the Picture')),
-      // The image is stored as a file on the device. Use the `Image.file`
-      // constructor with the given path to display the image.
-      body: Image.file(File(imagePath)),
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // Camera preview or captured image display
+          Positioned.fill(
+            child: _capturedFile == null
+                ? LayoutBuilder(builder: (context, constraints) {
+                    return GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      child: Center( 
+                        child: AspectRatio(
+                          aspectRatio: _controller!.value.aspectRatio,
+                          // aspectRatio: 4/3,
+                          child: CameraPreview(_controller!),
+                        ),
+                      ),
+                    );
+                  })
+                : Image.file(
+                    File(_capturedFile!.path),
+                    fit: BoxFit.contain, 
+                  ),
+          ),
+          // Guidelines (either top-view or side-view)
+          // if (_capturedFile == null && _isGuideVisible)
+          //   Positioned.fill(
+          //     child: CustomPaint(
+          //       painter: CameraGuidePainter(
+          //         isVisible: true,
+          //       ),
+          //     ),
+          //   ),
+          
+          // Control panel 
+          Positioned(
+            top: 20,
+            bottom: 20,
+            right: 20,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Close
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                  onPressed: () => Navigator.pop(context),
+                  style: IconButton.styleFrom(backgroundColor: Colors.black54),
+                ),
+                
+                // Capture, guidelines
+                Column(
+                  children: [
+                    // For camera preview 
+                    if (_capturedFile == null) ...[
+                      // CIRCULAR SHUTTER BUTTON
+                      GestureDetector(
+                        onTap: _takePicture,
+                        child: Container(
+                          height: 80,
+                          width: 80,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 4),
+                          ),
+                          child: Center(
+                            child: Container(
+                              height: 60,
+                              width: 60,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                // Dims the button if in live mode
+                                color:  Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 15),
+                      IconButton(
+                        icon: Icon(
+                          _isGuideVisible ? Icons.grid_view : Icons.grid_off,
+                          color: Colors.white,
+                        ),
+                        onPressed: () => setState(() => _isGuideVisible = !_isGuideVisible),
+                        style: IconButton.styleFrom(backgroundColor: Colors.black54),
+                      )
+                    ] else ...[
+                      // For capured image 
+                      // Retake
+                      IconButton(
+                        onPressed: () => setState(() => _capturedFile = null),
+                        icon: const Icon(Icons.refresh),
+                        color: Colors.white, 
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                          shape: const CircleBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      // Approve
+                      IconButton(
+                        onPressed: () => Navigator.pop(context, _capturedFile),
+                        icon: const Icon(Icons.check),
+                        color: Colors.white, 
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          shape: const CircleBorder(),
+                        ),
+
+                      ),
+                    ]
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

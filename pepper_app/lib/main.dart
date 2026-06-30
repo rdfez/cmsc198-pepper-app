@@ -4,15 +4,8 @@ import 'package:pepper_app/theme/theme.dart';
 import 'package:camera/camera.dart';
 
 late CameraDescription firstCamera;
-Future<void> main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-
-   // Obtain a list of the available cameras on the device.
-  final cameras = await availableCameras();
-
-  // Get a specific camera from the list of available cameras.
-  final firstCamera = cameras.first;
-
   runApp(const MyApp());
 }
 
@@ -24,7 +17,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Pepper App',
       theme: appTheme,
-      home: HomePage(title: 'Peppe App', camera: firstCamera),
+      home: const HomePage(title: 'Pepper App'),
     );
   }
 }

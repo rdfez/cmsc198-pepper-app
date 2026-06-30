@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:pepper_app/theme/theme.dart';
 import 'package:pepper_app/pages/howto_page.dart';
 import 'package:pepper_app/pages/camera_page.dart';
-import 'package:camera/camera.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.title, required this.camera});
+  // const HomePage({super.key, required this.title});
+  const HomePage({super.key, required this.title});
 
-  final CameraDescription camera;
   final String title;
   
   @override
@@ -42,8 +41,8 @@ class _HomePageState extends State<HomePage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) =>
-                                  TakePictureScreen(camera: widget.camera),
+                              builder: (context) => 
+                                  TakePictureScreen(),
                             ),
                           );
                         },
