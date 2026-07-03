@@ -23,18 +23,14 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   @override
   void initState() {
     super.initState();
-    _checkPermissionAndInit();
+    _initializeCamera();
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
-    // _setupCamera();
   }
 
-  Future<void> _checkPermissionAndInit() async {
-    var status = await Permission.camera.request();
-    if (status.isGranted) {
-      // _setupCamera();
+  Future<void> _initializeCamera() async {
       final cameras = await availableCameras();
       if (cameras.isEmpty) return;
       
@@ -48,27 +44,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
       if (mounted) {
         setState(() => _isInitialized = true);
       }
-    } else {
-      print("Camera permission denied");
-    }
   }
-
-  // // Initialize camera controller 
-  // Future<void> _setupCamera() async {
-  //   final cameras = await availableCameras();
-  //   if (cameras.isEmpty) return;
-    
-  //   _controller = CameraController(
-  //     cameras[0],
-  //     ResolutionPreset.medium,
-  //     enableAudio: false,
-  //   );
-  //   await _controller!.initialize();
-    
-  //   if (mounted) {
-  //     setState(() => _isInitialized = true);
-  //   }
-  // }
 
   @override
   void dispose() {
@@ -91,7 +67,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   }
 
 @override
-  Widget build(BuildContext context) {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   Widget build(BuildContext context) {
     if (!_isInitialized || _controller == null) {
       return const Scaffold(
         backgroundColor: Colors.black,
@@ -177,14 +153,6 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                         ),
                       ),
                       const SizedBox(height: 15),
-                      IconButton(
-                        icon: Icon(
-                          _isGuideVisible ? Icons.grid_view : Icons.grid_off,
-                          color: Colors.white,
-                        ),
-                        onPressed: () => setState(() => _isGuideVisible = !_isGuideVisible),
-                        style: IconButton.styleFrom(backgroundColor: Colors.black54),
-                      )
                     ] else ...[
                       // For capured image 
                       // Retake

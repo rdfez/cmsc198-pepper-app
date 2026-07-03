@@ -22,6 +22,7 @@ ThemeData appTheme = ThemeData(
     primary: PRIMARY_COLOR,
     secondary: SECONDARY_COLOR,
     tertiary: TERTIARY_COLOR,
+    onPrimary: WHITE_SHADE,
   ),
   scaffoldBackgroundColor: BACKGROUND_COLOR,
 
