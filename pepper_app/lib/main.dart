@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pepper_app/pages/home_page.dart';
 import 'package:pepper_app/theme/theme.dart';
-import 'package:camera/camera.dart';
 
-late CameraDescription firstCamera;
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
@@ -15,9 +13,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Pepper App',
+      debugShowCheckedModeBanner: false, 
+      title: 'PepSee',
       theme: appTheme,
-      home: const HomePage(title: 'Pepper App'),
+      home: const HomePage(title: 'PepSee'),
     );
   }
 }

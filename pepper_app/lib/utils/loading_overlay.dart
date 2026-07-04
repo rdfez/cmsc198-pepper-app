@@ -1,6 +1,7 @@
-import 'package:pepper_app/theme/theme.dart';
-import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'package:flutter/material.dart';
+
+import 'package:pepper_app/theme/theme.dart';
 
 class AnalysisLoadingOverlay extends StatelessWidget {
   const AnalysisLoadingOverlay({super.key});

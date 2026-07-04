@@ -1,16 +1,17 @@
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:pepper_app/theme/theme.dart';
 import 'package:pepper_app/pages/howto_page.dart';
 import 'package:pepper_app/pages/camera_page.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:pepper_app/utils/dimension_calculator.dart';
+import 'package:pepper_app/utils/analyzer.dart';
 import 'package:pepper_app/pages/result_page.dart';
 import 'package:pepper_app/utils/loading_overlay.dart';
+
+// Home page of the app, where users can choose to take a picture or upload from gallery
 class HomePage extends StatefulWidget {
-  // const HomePage({super.key, required this.title});
   const HomePage({super.key, required this.title});
 
   final String title;
@@ -21,9 +22,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   bool _isAnalyzing = false;
-  String _modelPath = 'assets/fruit_model.onnx';
-  // String? _partToAnalyze = 'Fruit';
-  // final List<String> _pepperParts = ['Fruit', 'Fruit', 'Flesh'];
+  final String _modelPath = 'assets/models/fruit_model.onnx';
 
    @override
   void initState() {
@@ -63,6 +62,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  // Analyze image file from gallery or camera
   Future<void> _analyzeFile(File imageFile) async {
     setState(() => _isAnalyzing = true);
     await Future.delayed(const Duration(milliseconds: 100));
@@ -99,9 +99,6 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
       body: SafeArea(
         child: Center(
           child: Stack(
@@ -110,93 +107,53 @@ class _HomePageState extends State<HomePage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                     Text(
-                        'Pepper Characterization App',
-                        style: Theme.of(context).textTheme.headlineLarge,
-                      ),
-                      const SizedBox(height: 40),
-                      // Text(
-                      //   'Select a part to analyze',
-                      //   style: Theme.of(context).textTheme.bodyMedium,
-                      // ),
-                      // DropdownMenu<String>(
-                      //   initialSelection: _partToAnalyze,
-                      //   // label: const Text('Part to Analyze'),
-                      //   onSelected: (String? newValue) {
-                      //     setState(() {
-                      //       _partToAnalyze = newValue;
-                            
-                      //       if (_partToAnalyze == 'Fruit') {
-                      //         _modelPath = 'assets/fruit_model.onnx';
-                      //       // } else if (_partToAnalyze == 'Fruit') {
-                      //       //   _modelPath = 'assets/best_fruit.onnx';
-                      //       // } else if (_partToAnalyze == 'Flesh') {
-                      //       //   _modelPath = 'assets/best_flesh.onnx';
-                      //       }
-                      //     });
-                      //   },
-                      //   // 3. Map your options to DropdownMenuEntry widgets
-                      //   dropdownMenuEntries: _pepperParts.map<DropdownMenuEntry<String>>((String value) {
-                      //     return DropdownMenuEntry<String>(
-                      //       value: value,
-                      //       label: value,
-                      //       style: MenuItemButton.styleFrom(
-                      //         foregroundColor: appTheme.colorScheme.onPrimary,
-                      //       ),
-                      //     );
-                      //   }).toList(),
-                      //   textStyle: TextStyle(color: appTheme.colorScheme.onPrimary, fontWeight: FontWeight.bold),
-                      //   // Style the dropdown input box
-                      //   inputDecorationTheme: InputDecorationTheme(
-                      //     filled: true,
-                      //     fillColor: appTheme.colorScheme.primary,
-                      //     border: OutlineInputBorder(
-                      //       borderRadius: BorderRadius.circular(12),
-                      //       borderSide: BorderSide.none,
-                      //     ),
-                      //   ),
-                      //   // Style the floating overlay menu panel
-                      //   menuStyle: MenuStyle(
-                      //     backgroundColor: WidgetStateProperty.all(appTheme.colorScheme.secondary),
-                      //     elevation: WidgetStateProperty.all(8),
-                      //   ),
-                      // ),
-                      // const SizedBox(height: 40),
-                      ElevatedButton(
-                        onPressed: () {
-                          _handleUseCamera();
-                        },
-                        style: AppButtonStyles.primary,
-                        child: const Text('Use Camera'),
-                      ),
-                      const SizedBox(height: 10),
-                      ElevatedButton(
-                        onPressed: () {
-                          _handleGalleryUpload();
-                        },
-                        // _isAnalyzing ? null : _handleGalleryUpload,
-                        style: AppButtonStyles.primary,
-                        child: const Text('Upload from Gallery'),
-                      ),
-
-                      const SizedBox(height: 20),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const HowToPage(),
-                            ),
-                          );
-                        },
-                        child: const Text('View Instructions'),
-                      ),
-                    ],
-                  ),
+                    // Logo and title
+                    Image.asset(
+                      'assets/images/logo.png',
+                      width: 200,                
+                      height: 200,               
+                      fit: BoxFit.cover,         
+                    ),
+                    Text(
+                      'Welcome to PepSee',
+                      style: Theme.of(context).textTheme.headlineLarge,
+                    ),
+                    const SizedBox(height: 40),
+                    // Buttons for camera and gallery
+                    ElevatedButton(
+                      onPressed: () {
+                        _handleUseCamera();
+                      },
+                      style: AppButtonStyles.primary,
+                      child: const Text('Use Camera'),
+                    ),
+                    const SizedBox(height: 10),
+                    ElevatedButton(
+                      onPressed: () {
+                        _isAnalyzing ? null : _handleGalleryUpload();
+                      },
+                      style: AppButtonStyles.primary,
+                      child: const Text('Upload from Gallery'),
+                    ),
+                    const SizedBox(height: 20),
+                    // Button for instructions
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const HowToPage(),
+                          ),
+                        );
+                      },
+                      child: const Text('View Instructions'),
+                    ),
+                  ],
                 ),
+              ),
 
-                // SHOW LOADING OVERLAY
-                if (_isAnalyzing) const AnalysisLoadingOverlay(),
+              // SHOW LOADING OVERLAY
+              if (_isAnalyzing) const AnalysisLoadingOverlay(),
             ],
           )
         ),

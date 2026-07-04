@@ -2,9 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:pepper_app/utils/dimension_calculator.dart';
+import 'package:pepper_app/utils/analyzer.dart';
 
-String _displayShape(String raw) {
+// Get cleaned label
+String _getShapeLabel(String raw) {
   final cleaned = raw
       .replaceAll(
         RegExp(r'fruit[\s_-]*shape[\s_:-]*', caseSensitive: false),
@@ -17,6 +18,7 @@ String _displayShape(String raw) {
       .join(' ');
 }
 
+// Analysis Results Page
 class AnalysisResultsPage extends StatelessWidget {
   final File imageFile;
   final AnalysisResult result;
@@ -33,7 +35,7 @@ class AnalysisResultsPage extends StatelessWidget {
     for (var i = 0; i < result.fruits.length; i++) {
       final f = result.fruits[i];
       buffer.writeln(
-        '${i + 1},${_displayShape(f.shape)},'
+        '${i + 1},${_getShapeLabel(f.shape)},'
         '${f.lengthCm?.toStringAsFixed(2) ?? ''},'
         '${f.widthCm?.toStringAsFixed(2) ?? ''},'
         '${f.confidence.toStringAsFixed(3)}',
@@ -44,8 +46,7 @@ class AnalysisResultsPage extends StatelessWidget {
     final file = File('${dir.path}/pepper_measurements.csv');
     await file.writeAsString(buffer.toString());
 
-    // Opens the OS share sheet so the user can save/export it wherever
-    // they want (Files app, email, Drive, etc). Requires share_plus.
+    // Open the share overlay so the user can save/export results
     await Share.shareXFiles(
       [XFile(file.path)],
       text: 'Pepper shape & size measurements',
@@ -72,8 +73,7 @@ class AnalysisResultsPage extends StatelessWidget {
           SizedBox(width: 8),
           Expanded(
             child: Text(
-              'No ruler detected — shapes were still classified, but '
-              'sizes are unavailable for this photo.',
+              'No ruler detected — sizes are unavailable for this photo.',
             ),
           ),
         ],
@@ -104,14 +104,13 @@ class AnalysisResultsPage extends StatelessWidget {
     );
   }
 
+  // Labeled image with bounding boxes and shape labels
   Widget _buildLabeledImage() {
     final aspectRatio = result.imageWidth / result.imageHeight;
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
       child: AspectRatio(
-        // Forces this box to match the original photo's aspect ratio, so
-        // fractional box coords map directly onto rendered pixel coords
-        // below with no letterboxing math needed.
+        // Forces box to match the original photo's aspect ratio
         aspectRatio: aspectRatio,
         child: Stack(
           fit: StackFit.expand,
@@ -126,10 +125,12 @@ class AnalysisResultsPage extends StatelessWidget {
     );
   }
 
+  // Total Count and Export CSV button
   Widget _buildCountAndExport(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
+        // Total Count
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -143,6 +144,8 @@ class AnalysisResultsPage extends StatelessWidget {
             const Text('peppers detected'),
           ],
         ),
+
+        // Export CSV button
         FilledButton.icon(
           onPressed: result.fruits.isEmpty
               ? null
@@ -154,13 +157,16 @@ class AnalysisResultsPage extends StatelessWidget {
     );
   }
 
-    Widget _buildResultsTable() {
+  // Actual Results (Tabular)
+  Widget _buildResultsTable() {
+    // No fruits detected
     if (result.fruits.isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 24),
         child: Center(child: Text('No peppers detected in this photo.')),
       );
     }
+    // Fruits detected, show table results
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: SingleChildScrollView(
@@ -175,7 +181,7 @@ class AnalysisResultsPage extends StatelessWidget {
             for (var i = 0; i < result.fruits.length; i++)
               DataRow(cells: [
                 DataCell(Text('${i + 1}')),
-                DataCell(Text(_displayShape(result.fruits[i].shape))),
+                DataCell(Text(_getShapeLabel(result.fruits[i].shape))),
                 DataCell(Text(_formatSize(result.fruits[i]))),
                 DataCell(Text(
                   '${(result.fruits[i].confidence * 100).toStringAsFixed(0)}%',
@@ -188,9 +194,7 @@ class AnalysisResultsPage extends StatelessWidget {
   }
 }
 
-/// Draws each fruit's bounding box + "#index shape" label directly on top
-/// of the image, using fractional coords scaled to the painter's canvas
-/// size (which exactly matches the rendered image thanks to AspectRatio).
+// Draw each fruit's bounding box with shape labels 
 class _DetectionBoxPainter extends CustomPainter {
   final List<FruitMeasurement> fruits;
 
@@ -213,7 +217,7 @@ class _DetectionBoxPainter extends CustomPainter {
       );
       canvas.drawRect(rect, boxPaint);
 
-      final label = _displayShape(f.shape);
+      final label = _getShapeLabel(f.shape);
       final textPainter = TextPainter(
         text: TextSpan(
           text: label,

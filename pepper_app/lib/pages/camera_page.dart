@@ -1,12 +1,11 @@
 import 'dart:async';
 import 'dart:io';
-
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-// A screen that allows users to take a picture using a given camera.
+// A screen that allows users to take a picture using the phone camera
 class TakePictureScreen extends StatefulWidget {
   const TakePictureScreen({super.key});
 
@@ -18,7 +17,6 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   CameraController? _controller;
   XFile? _capturedFile;
   bool _isInitialized = false;
-  bool _isGuideVisible = false;
   String? _cameraError;
 
   @override
@@ -31,6 +29,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     ]);
   }
 
+  // Initialize camera
   Future<void> _initializeCamera() async {
     try {
       final cameras = await availableCameras();
@@ -59,15 +58,6 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp, // Revert to portrait mode
-    ]);
-    _controller?.dispose();
-    super.dispose();
-  }
-
   // Capture current frame
   Future<void> _takePicture() async {
     if (_controller == null || !_controller!.value.isInitialized) return;
@@ -79,8 +69,18 @@ class TakePictureScreenState extends State<TakePictureScreen> {
     }
   }
 
+  // Dispose camera controller and reset orientation
+  @override
+  void dispose() {
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp, // Revert to portrait mode
+    ]);
+    _controller?.dispose();
+    super.dispose();
+  }
+
 @override
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   Widget build(BuildContext context) {
+Widget build(BuildContext context) {
     if (_cameraError != null) {
       return Scaffold(
         backgroundColor: Colors.black,
@@ -131,13 +131,13 @@ class TakePictureScreenState extends State<TakePictureScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Camera preview or captured image display
+          // Camera preview or captured image
           Positioned.fill(
             child: _capturedFile == null
                 ? LayoutBuilder(builder: (context, constraints) {
                     return GestureDetector(
                       behavior: HitTestBehavior.opaque,
-                      child: Center( 
+                      child: Center(
                         child: AspectRatio(
                           aspectRatio: _controller!.value.aspectRatio,
                           // aspectRatio: 4/3,
@@ -148,89 +148,81 @@ class TakePictureScreenState extends State<TakePictureScreen> {
                   })
                 : Image.file(
                     File(_capturedFile!.path),
-                    fit: BoxFit.contain, 
+                    fit: BoxFit.contain,
                   ),
           ),
-          // Guidelines (either top-view or side-view)
-          // if (_capturedFile == null && _isGuideVisible)
-          //   Positioned.fill(
-          //     child: CustomPaint(
-          //       painter: CameraGuidePainter(
-          //         isVisible: true,
-          //       ),
-          //     ),
-          //   ),
-          
-          // Control panel 
-          Positioned(
-            top: 20,
-            bottom: 20,
-            right: 20,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+          // Camera controls
+          SafeArea(
+            maintainBottomViewPadding: false,
+            child: Stack(
               children: [
-                // Close
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white, size: 30),
-                  onPressed: () => Navigator.pop(context),
-                  style: IconButton.styleFrom(backgroundColor: Colors.black54),
+                // Close button 
+                Positioned(
+                  top: 16,
+                  left: 16,
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                    onPressed: () => Navigator.pop(context),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.black54,
+                      shape: const CircleBorder(),
+                    ),
+                  ),
                 ),
-                
-                // Capture, guidelines
-                Column(
-                  children: [
-                    // For camera preview 
-                    if (_capturedFile == null) ...[
-                      // CIRCULAR SHUTTER BUTTON
-                      GestureDetector(
-                        onTap: _takePicture,
-                        child: Container(
-                          height: 80,
-                          width: 80,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 4),
-                          ),
-                          child: Center(
+
+                // Shutter button
+                Align(
+                  alignment: const Alignment(0.92, 0.0),
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 12.0),
+                    child: _capturedFile == null
+                        ? GestureDetector(
+                            onTap: _takePicture,
                             child: Container(
-                              height: 60,
-                              width: 60,
+                              height: 80,
+                              width: 80,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                // Dims the button if in live mode
-                                color:  Colors.white,
+                                border: Border.all(color: Colors.white, width: 4),
+                              ),
+                              child: Center(
+                                child: Container(
+                                  height: 60,
+                                  width: 60,
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white,
+                                  ),
+                                ),
                               ),
                             ),
+                          )
+                        : Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                onPressed: () => setState(() => _capturedFile = null),
+                                icon: const Icon(Icons.refresh),
+                                color: Colors.white,
+                                style: IconButton.styleFrom(
+                                  backgroundColor: Colors.redAccent,
+                                  shape: const CircleBorder(),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              IconButton(
+                                onPressed: () => Navigator.pop(context, _capturedFile),
+                                icon: const Icon(Icons.check),
+                                color: Colors.white,
+                                style: IconButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  shape: const CircleBorder(),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 15),
-                    ] else ...[
-                      // For capured image 
-                      // Retake
-                      IconButton(
-                        onPressed: () => setState(() => _capturedFile = null),
-                        icon: const Icon(Icons.refresh),
-                        color: Colors.white, 
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.redAccent,
-                          shape: const CircleBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      // Approve
-                      IconButton(
-                        onPressed: () => Navigator.pop(context, _capturedFile),
-                        icon: const Icon(Icons.check),
-                        color: Colors.white, 
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          shape: const CircleBorder(),
-                        ),
-
-                      ),
-                    ]
-                  ],
+                  ),
                 ),
               ],
             ),
