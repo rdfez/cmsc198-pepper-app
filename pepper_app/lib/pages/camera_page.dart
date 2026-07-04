@@ -19,6 +19,7 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   XFile? _capturedFile;
   bool _isInitialized = false;
   bool _isGuideVisible = false;
+  String? _cameraError;
 
   @override
   void initState() {
@@ -31,19 +32,31 @@ class TakePictureScreenState extends State<TakePictureScreen> {
   }
 
   Future<void> _initializeCamera() async {
+    try {
       final cameras = await availableCameras();
-      if (cameras.isEmpty) return;
-      
+      if (cameras.isEmpty) {
+        setState(() => _cameraError = 'No camera found on this device.');
+        return;
+      }
+
       _controller = CameraController(
         cameras[0],
         ResolutionPreset.medium,
         enableAudio: false,
       );
+
       await _controller!.initialize();
-      
+
       if (mounted) {
         setState(() => _isInitialized = true);
       }
+    } catch (e, stackTrace) {
+      debugPrint('Camera initialization failed: $e');
+      debugPrint('$stackTrace');
+      if (mounted) {
+        setState(() => _cameraError = e.toString());
+      }
+    }
   }
 
   @override
@@ -68,6 +81,45 @@ class TakePictureScreenState extends State<TakePictureScreen> {
 
 @override
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    Widget build(BuildContext context) {
+    if (_cameraError != null) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error, color: Colors.redAccent, size: 56),
+                const SizedBox(height: 16),
+                const Text(
+                  'Camera failed to initialize',
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _cameraError!,
+                  style: const TextStyle(color: Colors.white70),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _cameraError = null;
+                      _isInitialized = false;
+                    });
+                    _initializeCamera();
+                  },
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     if (!_isInitialized || _controller == null) {
       return const Scaffold(
         backgroundColor: Colors.black,
